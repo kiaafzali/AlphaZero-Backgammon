@@ -64,14 +64,14 @@ if __name__ == "__main__":
     has_gpu = torch.cuda.is_available()
     has_mps = torch.backends.mps.is_built()
     device =  "cuda" if torch.cuda.is_available() else "mps" if has_mps else "cpu"
-    device = "cpu"
+    # device = "cpu"
     
     bg = Backgammon()
     shared_model = ResNet(game=bg, num_resBlocks=20, num_hidden=64, num_features=6, device=device)
     optimizer = torch.optim.Adam(shared_model.parameters(), lr=0.0002, weight_decay=0.0001)
 
-    num_parallel_games = 2
-    num_concurrent_processes = 8
+    num_parallel_games = 8
+    num_concurrent_processes = 16
     total_processes = 128
     train_iteration = 5
 
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     args = {
         'dir': 'data/TEST_13',
-        'num_searches': 100,
+        'num_searches': 400,
         'train_iteration': 0,
         'num_parallel_games': num_parallel_games,
         'num_concurrent_processes': num_concurrent_processes,

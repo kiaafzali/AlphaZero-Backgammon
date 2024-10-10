@@ -12,7 +12,7 @@ class SPG:
         self.memory = []
         self.root = root
         self.node = None
-
+@timed
 def selfPlayParallel(model, game, args, board=None, jumps=None):
     return_memory = []
     player = 1
