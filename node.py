@@ -2,44 +2,39 @@ import math
 import random
 import numpy as np
 
-from util import *
-
-
+from util import UNIQUE_JUMPS, timed
 class Node:
-    def __init__(self, game, args, board, jumps, parent=None, action_taken=None, play_taken=None, prior=0, visit_count=0, level=0):
+    def __init__(self, game, args, board, jumps, parent=None, action_taken=None, prior=0, visit_count=0, level=0):
         self.game = game
         self.args = args
         self.board = board
         self.jumps = jumps
         self.parent = parent
-        self.play_taken = play_taken
         self.action_taken = action_taken
-
         self.prior = prior
-        self.children = []
-
         self.visit_count = visit_count
-        self.value_sum = 0
-        self.state_value = None
-
         self.level = level
 
+        self.children: list[Node] = []
+        self.value_sum = 0
+        self.state_value = None
         self.search_weight = 1
         if self.jumps and len(self.jumps) == 2:
             self.search_weight = 2
 
     def __str__(self):
+        indent = " "*2*self.level
         board_repr = self.game.draw(board=self.board)
         board_repr = '\n'.join(
-            [" "*2*self.level + line for line in board_repr.splitlines()])
+            [indent + line for line in board_repr.splitlines()])
         return \
             f"""
-{" "*2*self.level}{"-"*60}
-{" "*2*self.level}Level: {self.level}, N: {self.visit_count}, val: {self.value_sum:.3f}, prior: {self.prior:.3f}, uct:{self.parent.get_ucb(self) if self.parent else None}, weight: {self.search_weight}, num_children: {len(self.children)}
+{indent}{"-"*60}
+{indent}Level: {self.level}, N: {self.visit_count}, val: {self.value_sum:.3f}, prior: {self.prior:.3f}, uct:{self.parent.get_ucb(self) if self.parent else None}, weight: {self.search_weight}, num_children: {len(self.children)}
 {board_repr}
-{" "*2*self.level}jumps={self.jumps}, state_value={self.state_value}, action_taken={self.action_taken}
-{"  "*2*self.level}board = {self.board}
-{" "*2*self.level}{"-"*60}
+{indent}jumps={self.jumps}, state_value={self.state_value}, action_taken={self.action_taken}
+{indent}board = {self.board}
+{indent}{"-"*60}
 """
 
     def is_fully_expanded(self):
@@ -51,7 +46,6 @@ class Node:
         else:
             best_child = None
             best_ucb = -np.inf
-
             for child in self.children:
                 ucb = self.get_ucb(child)
                 if ucb > best_ucb:
@@ -66,15 +60,7 @@ class Node:
         else:
             q_value = 1 - ((child.value_sum / child.visit_count) + 1) / 2
         return q_value + self.args['C'] * (math.sqrt(self.visit_count) / (child.visit_count + 1)) * child.prior
-
-    def find_random_child_weighted(self):
-        if not self.children:
-            raise RuntimeError(
-                f"find random child weighted called on leaf node {self.node}")
-        weights = [child.search_weight for child in self.children]
-        selected_child = random.choices(self.children, weights=weights, k=1)[0]
-        return selected_child
-
+    #@timed
     def expand(self, policy, plays):
         # plays = self.game.get_valid_plays(self.board, self.jumps, 1)
         if len(self.children) > 0:
@@ -91,9 +77,6 @@ class Node:
                          action_taken=child_action_taken, prior=child_prior, visit_count=0, level=self.level+1)
             self.children.append(child)
 
-            if play == [[]]:
-                print(f"created {len(self.children)} children for play {play}")
-
             for possible_jump in UNIQUE_JUMPS:
                 child_child = Node(self.game, self.args, board=child_board, jumps=possible_jump, parent=child,
                                    action_taken=child_action_taken, prior=1, visit_count=0, level=self.level+2)
@@ -106,3 +89,11 @@ class Node:
             value = self.game.get_opponent_value(value)
         if self.parent is not None:
             self.parent.backpropagate(value)
+
+    def find_random_child_weighted(self):
+        if not self.children:
+            raise RuntimeError(
+                f"find random child weighted called on leaf node {self.node}")
+        weights = [child.search_weight for child in self.children]
+        selected_child = random.choices(self.children, weights=weights, k=1)[0]
+        return selected_child

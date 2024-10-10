@@ -1,26 +1,27 @@
 import torch
 import torch.multiprocessing as mp
+import os
+import pickle
+import numpy as np
 
 from bg import Backgammon
-from mcts import MCTS
 from model import ResNet
-from selfplay import selfPlayMC
-from util import *
+from selfplay import selfPlay
+from util import timed, roll_dice
 
 
 def selfPlayMC_wrapper(shared_model, game, args, board=None, jumps=None):
     # This wrapper function will be called by each process
     print(f"Process ID: {os.getpid()}: inside selfplaceMC")
-    return selfPlayMC(shared_model, game, args, board, jumps)
+    return selfPlay(shared_model, game, args, board, jumps)
 
 
 @timed
-def run_parallel_selfPlayMC(num_processes=5):
+def run_parallel_selfPlayMC(args, board=None, jumps=None, num_processes=5):
     # Set up the shared model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     bg = Backgammon()
-    shared_model = ResNet(game=bg, num_resBlocks=20,
-                          num_hidden=64, num_features=6, device=device)
+    shared_model = ResNet(game=bg, num_resBlocks=20, num_hidden=64, num_features=6, device=device)
     
     shared_model.share_memory() # This is necessary for the model to be shared across processes
     shared_model.eval()
@@ -42,14 +43,13 @@ def run_parallel_selfPlayMC(num_processes=5):
                           0, 0, 5, -5, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, -2, 0])
 
     # Create a pool of worker processes
-    # mp.set_start_method('spawn', force=True)  # This is important for CUDA compatibility
     pool = mp.Pool(processes=num_processes)
 
     # Prepare the arguments for each process
     process_args = []
     for _ in range(num_processes):
-        board = INIT_BOARD
-        jumps = roll_dice()
+        board = INIT_BOARD if board is None else board
+        jumps = roll_dice() if jumps is None else jumps
         process_args.append((shared_model, bg, args, board, jumps))
 
     # Run the processes and collect results
@@ -70,7 +70,7 @@ def run_parallel_selfPlayMC(num_processes=5):
 
 
 if __name__ == '__main__':
-    # run_single_selfPlayMC()
+    run_parallel_selfPlayMC()
     # This is important for CUDA compatibility
     mp.set_start_method('spawn', force=True)
     num_runs = 1  # Number of times to run run_parallel_selfPlayMC
@@ -79,8 +79,7 @@ if __name__ == '__main__':
     for run in range(num_runs):
         print(f"Starting run {run + 1}/{num_runs}")
         combined_memory = run_parallel_selfPlayMC(1)
-        print(
-            f"Run {run + 1} completed. Total memory entries: {len(combined_memory)}")
+        print(f"Run {run + 1} completed. Total memory entries: {len(combined_memory)}")
 
         # Append the results to the file
         with open(output_file, 'ab') as f:

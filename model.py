@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
+from util import timed
 class ResNet(nn.Module):
     def __init__(self, game, num_resBlocks, num_hidden, num_features, device):
         super().__init__()
@@ -14,13 +14,13 @@ class ResNet(nn.Module):
             nn.ReLU()
         )
 
+        # ResBlock backbone
         self.backBone = nn.ModuleList(
             [ResBlock(num_hidden) for i in range(num_resBlocks)]
         )
 
         # Policy head
-        self.policyConv = nn.Conv1d(
-            num_hidden, num_hidden, kernel_size=3, padding=1)
+        self.policyConv = nn.Conv1d(num_hidden, num_hidden, kernel_size=3, padding=1)
         self.policyBN = nn.BatchNorm1d(num_hidden)
         self.policyFlatten = nn.Flatten()
         self.policyLinear = nn.Sequential(
@@ -37,20 +37,20 @@ class ResNet(nn.Module):
         )
 
         # Value head
-        self.valueConv = nn.Conv1d(num_hidden, 2, kernel_size=3, padding=1)
-        self.valueBN = nn.BatchNorm1d(2)
+        self.valueConv = nn.Conv1d(num_hidden, 7, kernel_size=3, padding=1)
+        self.valueBN = nn.BatchNorm1d(7)
         self.valueFlatten = nn.Flatten()
         self.valueLinear = nn.Sequential(
-            nn.Linear(2 * game.idx_count + num_features, 128),
-            nn.BatchNorm1d(128),
+            nn.Linear(7 * game.idx_count + num_features, 256),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Linear(128, 1),
+            nn.Linear(256, 1),
             nn.Tanh()
         )
 
         self.to(device)
-    # @timed
-
+    
+    #@timed
     def forward(self, x, features):
         x = self.startBlock(x)
         for resBlock in self.backBone:
@@ -78,11 +78,9 @@ class ResNet(nn.Module):
 class ResBlock(nn.Module):
     def __init__(self, num_hidden):
         super().__init__()
-        self.conv1 = nn.Conv1d(num_hidden, num_hidden,
-                               kernel_size=3, padding=1)
+        self.conv1 = nn.Conv1d(num_hidden, num_hidden, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm1d(num_hidden)
-        self.conv2 = nn.Conv1d(num_hidden, num_hidden,
-                               kernel_size=3, padding=1)
+        self.conv2 = nn.Conv1d(num_hidden, num_hidden, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm1d(num_hidden)
 
     def forward(self, x):

@@ -1,6 +1,7 @@
-import np
+import numpy as np
 import time
 import random
+import os
 
 np.set_printoptions(linewidth=200)
 
@@ -20,7 +21,7 @@ def timed(function):
         start_time = time.time()
         result = function(*args, **kwargs)
         end_time = time.time()
-        print(f"{function.__name__} took {end_time - start_time} seconds to run.")
+        print(f"Process ID: {os.getpid()}: {function.__name__} took {end_time - start_time} seconds to run.")
         return result
     return wrapper
 

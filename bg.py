@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 
-from util import *
+from util import INIT_BOARD, playidx_to_action, timed
 
 class Backgammon:
     def __init__(self):
@@ -35,35 +35,43 @@ class Backgammon:
         if self.check_win(board):
             return 1, True
         return 0, False
+    
+    def get_valid_plays(self, board, jumps, player):
+        if len(jumps) == 4:
+            return self._generate_plays_quads(board, jumps)
+        return self._generate_plays(board, jumps)
 
     def get_encoded_state(self, board, jumps):
-        # [26] + jumps
-        # (7, 26) + (6)
+        # np.array(26) + jumps[] -> np.array(7, 26) + np.array(6)
 
+        # Encode board
         white_cnt = np.maximum(board, 0).astype(np.float32) / 15
         white_one = (board == 1).astype(np.float32)
         white_tower = (board > 1).astype(np.float32)
         black_cnt = np.maximum(-board, 0).astype(np.float32) / 15
         black_one = (board == -1).astype(np.float32)
         black_tower = (board < -1).astype(np.float32)
-        # Using small threshold for float comparison
         empty = (board == 0).astype(np.float32)
 
-        # Stack the arrays vertically
-        encoded_board = np.vstack(
-            (white_cnt, white_one, white_tower, black_cnt, black_one, black_tower, empty))
+        encoded_board = np.vstack([
+            white_cnt, 
+            white_one, 
+            white_tower, 
+            black_cnt, 
+            black_one, 
+            black_tower, 
+            empty
+        ])
 
+        # Encode jumps and features
         jumps_encoded = np.zeros(4, dtype=np.float32)
         jumps_encoded[:len(jumps)] = jumps
         jumps_encoded = jumps_encoded/6
-
         indicies = np.arange(26)
         black_pip = np.sum(black_cnt * indicies) / 200
-        indicies = 25-indicies
-        white_pip = np.sum(white_cnt * indicies) / 200
-
-        features = np.concatenate(
-            [jumps_encoded, [white_pip, black_pip]]).astype(np.float32)
+        white_pip = np.sum(white_cnt * (25-indicies)) / 200
+        
+        features = np.concatenate([jumps_encoded, [white_pip, black_pip]]).astype(np.float32)
 
         return encoded_board, features
 
@@ -77,25 +85,25 @@ class Backgammon:
         black_tower = (boards < -1).astype(np.float32)
         empty = (boards == 0).astype(np.float32)
 
-        encoded_boards = np.stack(
-            [white_cnt, white_one, white_tower, black_cnt, black_one, black_tower, empty], axis=1)
+        encoded_boards = np.stack([
+            white_cnt, 
+            white_one, 
+            white_tower, 
+            black_cnt, 
+            black_one, 
+            black_tower, 
+            empty
+        ], axis=1)
 
-        # Encode features
+        # Encode jumps and features
         jumps_encoded = jumps.astype(np.float32) / 6
-
         indices = np.arange(26)
         black_pip = np.sum(black_cnt * indices, axis=1) / 200
         white_pip = np.sum(white_cnt * (25 - indices), axis=1) / 200
 
-        encoded_features = np.column_stack(
-            [jumps_encoded, white_pip, black_pip]).astype(np.float32)
+        encoded_features = np.column_stack([jumps_encoded, white_pip, black_pip]).astype(np.float32)
 
         return encoded_boards, encoded_features
-
-    def get_valid_plays(self, board, jumps, player):
-        if len(jumps) == 4:
-            return self._generate_plays_quads(board, jumps)
-        return self._generate_plays(board, jumps)
 
     def plays_to_actions(self, plays):
         actions = np.zeros(self.action_size)
@@ -150,9 +158,6 @@ class Backgammon:
         if jump not in jumps:
             return False
 
-        # Check if start exists
-        # print(board)
-        # print(move)
         if board[start] <= 0:
             return False
 
