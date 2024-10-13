@@ -52,6 +52,7 @@ def selfPlayParallel_wrapper(shared_model, game, args, board=None, jumps=None):
 def picke_memory(memory, args, iteration):
     start = time.time()
     dir = args['dir']
+
     output_file = f'{dir}/num_searches{args["num_searches"]}/data_{iteration}.pkl'
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, 'ab') as f:
@@ -64,25 +65,25 @@ if __name__ == "__main__":
     has_gpu = torch.cuda.is_available()
     has_mps = torch.backends.mps.is_built()
     device =  "cuda" if torch.cuda.is_available() else "mps" if has_mps else "cpu"
-    # device = "cpu"
+    device = "cpu"
     
     bg = Backgammon()
     shared_model = ResNet(game=bg, num_resBlocks=20, num_hidden=64, num_features=6, device=device)
     optimizer = torch.optim.Adam(shared_model.parameters(), lr=0.0002, weight_decay=0.0001)
 
-    num_parallel_games = 8
-    num_concurrent_processes = 16
-    total_processes = 128
-    train_iteration = 5
+    num_parallel_games = 1
+    num_concurrent_processes = 1
+    total_processes = 1
+    train_iteration = 2
 
     INIT_BOARD = np.array([0, 2, 0, 0, 0, 0, -5, 0, -3, 0, 0, 0, 5, -5, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, -2, 0])
-    TEST_BOARD = np.array([0, 2, 0, 0, 0, 0, -3, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 0, 0, 0, 0, -2, 0])
+    TEST_BOARD = np.array([0, 1, 0, 0, 0, 0, -1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, -1, 0])
     board = TEST_BOARD
     jumps = [1,3]
 
     args = {
         'dir': 'data/TEST_13',
-        'num_searches': 400,
+        'num_searches': 10,
         'train_iteration': 0,
         'num_parallel_games': num_parallel_games,
         'num_concurrent_processes': num_concurrent_processes,
@@ -97,6 +98,7 @@ if __name__ == "__main__":
 
 
     logger = setup_logger(args)
+    logger.info(f"Starting main process {os.getpid()} with args \n{args}, \nboard = {board}, \njumps = {jumps}")
     logger.info(f"device: {device}")
     dir = args['dir']
     os.makedirs(os.path.dirname(f"{dir}/num_searches{args['num_searches']}/"), exist_ok=True)
