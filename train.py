@@ -40,6 +40,7 @@ def train(model, optimizer, game, args, memory):
             
             total_policy_loss += policy_loss.item()
             total_value_loss += value_loss.item()
-        # total_value_loss /= len(memory)
-        # total_policy_loss /= len(memory)
+        total_value_loss /= len(memory)
+        total_policy_loss /= len(memory)
+        print(f"AZ.Train(): Total policy loss: {total_policy_loss}, Total value loss: {total_value_loss}")
         logger.info(f"    Train(): epoch {epoch+1} policy loss: {total_policy_loss}, Total value loss: {total_value_loss}")

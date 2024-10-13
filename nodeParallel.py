@@ -66,7 +66,7 @@ class NodeParallel:
     def expand(self, policy, plays):
         # plays = self.game.get_valid_plays(self.board, self.jumps, 1)
         if len(self.children) > 0:
-            print(f"expand():skip already expanded node")
+            # print(f"expand():skip already expanded node")
             return
         for play in plays:
             child_action_taken = self.game.play_to_action(play)

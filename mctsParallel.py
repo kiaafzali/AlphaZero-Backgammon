@@ -50,7 +50,7 @@ class MCTSParallel:
             if spg.root is None:
                 raise ValueError(f"search(): spg.root is None, spg_board: {spg_board}, spg_jumps: {spg_jumps}")
             if spg.root.is_fully_expanded():
-                print(f"search(): spg.root is fully expanded, skipping expand()")
+                # print(f"search(): spg.root is fully expanded, skipping expand()")
                 continue
             spg_board, spg_jumps = spg.root.board, spg.root.jumps
             spg_policy, spg_value = policy[i], float(value[i][0])
@@ -63,7 +63,7 @@ class MCTSParallel:
             spg.root.expand(spg_policy, valid_plays)
             count += 1
         end = time.time()
-        print(f"search(): Expand time: {end - start:.6f} seconds for {count} games")
+        # print(f"search(): Expand time: {end - start:.6f} seconds for {count} games")
 
         for search in range(self.args['num_searches']):
             # Selection
@@ -114,8 +114,8 @@ class MCTSParallel:
                 policy = torch.softmax(policy, axis=1).detach().cpu().numpy()
                 value = value.detach().cpu().numpy()
             end = time.time()
-            if len(expandable_spGames) > 0:
-                print(f"Search(): Model call time: {end - start:.6f} seconds for {len(expandable_spGames)} games")
+            # if len(expandable_spGames) > 0:
+            #     print(f"Search(): Model call time: {end - start:.6f} seconds for {len(expandable_spGames)} games")
 
             # Expansion and Backpropagation
             start = time.time()
@@ -133,5 +133,5 @@ class MCTSParallel:
                 node.expand(spg_policy, valid_plays)
                 node.backpropagate(spg_value, idx)
             end = time.time()
-            if len(expandable_spGames) > 0:
-                print(f"Search(): Expansion + Backprop time: {end - start:.6f} seconds for {len(expandable_spGames)} games")
+            # if len(expandable_spGames) > 0:
+            #     print(f"Search(): Expansion + Backprop time: {end - start:.6f} seconds for {len(expandable_spGames)} games")

@@ -1,7 +1,9 @@
 import numpy as np
 import time
 import os
-import logging 
+import logging
+import gc
+import psutil 
 
 from mctsParallel import MCTSParallel
 from nodeParallel import NodeParallel
@@ -22,8 +24,9 @@ def selfPlayParallel(model, game, args, board=None, jumps=None):
     board = board if board is not None else game.get_initial_board()
     jumps = jumps if jumps is not None else roll_dice()
     mctsParallel = MCTSParallel(game, args, model)
-    rootParallell = NodeParallel(game, args, board, jumps, visit_count=1)
-    spGames = [SPG(root=rootParallell, idx=idx) for idx in range(args['num_parallel_games'])]
+    rootParallel = NodeParallel(game, args, board, jumps, visit_count=1)
+    spGames = [SPG(root=rootParallel, idx=idx) for idx in range(args['num_parallel_games'])]
+    rootParallel = None
     P1_wins = 0
     P2_wins = 0
     spIter = 1
@@ -91,22 +94,29 @@ def selfPlayParallel(model, game, args, board=None, jumps=None):
                         hist_action_probs,
                         hist_outcome
                     ))
-                print(f"SPGame {idx} ended on player {-1*player} with board {spg.root}")
-                print(f"    {os.getpid()}: selfPlayParallel(): SPgame {idx} ended with {len(spg.memory)} states:")
-                print(f"memory[0]: {spg.memory[0][0]}, Player= {spg.memory[0][3]}, V= {return_memory[0][3]}")
-                print(f"memory[1]: {spg.memory[1][0]}, Player= {spg.memory[1][3]}, V= {return_memory[1][3]}")
-                print(f"memory[2]: {spg.memory[2][0]}, Player= {spg.memory[2][3]}, V= {return_memory[2][3]}")
-                print(f"memory[-3]: {spg.memory[-3][0]}, jumps={spg.memory[-3][1]}, Player= {spg.memory[-3][3]}, V= {return_memory[-3][3]}")
-                print(f"memory[-2]: {spg.memory[-2][0]}, jumps={spg.memory[-2][1]}, Player= {spg.memory[-2][3]}, V= {return_memory[-2][3]}")
-                print(f"memory[-1]: {spg.memory[-1][0]}, jumps={spg.memory[-1][1]}, Player= {spg.memory[-1][3]}, V= {return_memory[-1][3]}")
-                print(f"")
-                print(f"deleting spg {spGames[g].idx}: {spGames[g].root}")
+                # print(f"SPGame {idx} ended on player {-1*player} with board {spg.root}")
+                # print(f"    {os.getpid()}: selfPlayParallel(): SPgame {idx} ended with {len(spg.memory)} states:")
+                # print(f"memory[0]: {spg.memory[0][0]}, Player= {spg.memory[0][3]}, V= {return_memory[0][3]}")
+                # print(f"memory[1]: {spg.memory[1][0]}, Player= {spg.memory[1][3]}, V= {return_memory[1][3]}")
+                # print(f"memory[2]: {spg.memory[2][0]}, Player= {spg.memory[2][3]}, V= {return_memory[2][3]}")
+                # print(f"memory[-3]: {spg.memory[-3][0]}, jumps={spg.memory[-3][1]}, Player= {spg.memory[-3][3]}, V= {return_memory[-3][3]}")
+                # print(f"memory[-2]: {spg.memory[-2][0]}, jumps={spg.memory[-2][1]}, Player= {spg.memory[-2][3]}, V= {return_memory[-2][3]}")
+                # print(f"memory[-1]: {spg.memory[-1][0]}, jumps={spg.memory[-1][1]}, Player= {spg.memory[-1][3]}, V= {return_memory[-1][3]}")
+                # print(f"")
+                # print(f"deleting spg {spGames[g].idx}: {spGames[g].root}")
                 del spGames[g]
         player = game.get_opponent(player)
 
         end_time = time.time()
         iteration_time = end_time - start_time
-        print(f"{os.getpid()}: selfPlayParallel(): SP iter {spIter} done. time: {iteration_time:.4f} seconds for {len(spGames)} games with {args['num_searches']} num_searches")
+        print(f"    {os.getpid()}: selfPlayParallel(): SP iter {spIter} done. time: {iteration_time:.4f} seconds for {len(spGames)} games with {args['num_searches']} num_searches")
+
+        start_gc = time.time()
+        collected = gc.collect()
+        end_gc = time.time()
+        print(f"    {os.getpid()}:GC collected {collected} in time: {end_gc - start_gc:.4f} seconds")
+        
+        
         spIter += 1
-    print(f"    {os.getpid()}: selfPlayParallel(): All SPgames ended. P1 wins {P1_wins} P-1 wins {P2_wins}. States: {len(return_memory)}")
+    print(f"{os.getpid()}: selfPlayParallel(): All SPgames ended. P1 wins {P1_wins} P-1 wins {P2_wins}. States: {len(return_memory)}")
     return return_memory
